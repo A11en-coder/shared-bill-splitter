@@ -71,3 +71,9 @@ Balances after the expense: Alex +$20.00, Blair -$10.00, Casey -$10.00.
 Balances after the payment: Alex +$15.00, Blair -$5.00, Casey -$10.00.
 
 The payment reduces Blair's existing debt to Alex. Future expenses are split using their own amounts and shares.
+
+
+## Roadmap and reviews
+1. Sessions 1–2 — Data and API. Design groups, members, expenses, each member’s share, and recorded payments. Build routes to create and read them. Checkpoint: I’ll review your schema and API behavior.
+2. Session 3 — Balances. Calculate each member’s net balance from expenses and payments. Add a few focused checks for rounding and invalid input. Checkpoint: we’ll walk through one example by hand and compare it with your output.
+3. Sessions 4–5 — Interface and full flow. Build forms and a group summary, handle loading and errors, then test the main flow in the browser. Final checkpoint: we’ll run the local app and confirm the workflows.
