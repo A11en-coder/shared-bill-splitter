@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model member {
+  id        String   @id @default(uuid())
+  name      String
+  group     group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  shares    memberShare[]
+  sentPayments payment[] @relation("sentPayments")
+  receivedPayments payment[] @relation("receivedPayments")
+  sentExpenses expense[] @relation("payer")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model group {
+  id        String   @id @default(uuid())
+  name      String  
+  members   member[]
+  expenses  expense[]
+  payments  payment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model expense {
+  id        String   @id @default(uuid())
+  amountCents    Int
+  description String
+  group     group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  payer    member   @relation("payer", fields: [payerId], references: [id])
+  payerId   String
+  shares    memberShare[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model payment {
+  id        String   @id @default(uuid())
+  amountCents    Int
+  payer member   @relation("sentPayments", fields: [payerId], references: [id])
+  payerId   String
+  payee member   @relation("receivedPayments", fields: [payeeId], references: [id])
+  payeeId   String
+  group     group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model memberShare {
+  id        String   @id @default(uuid()) 
+  member    member   @relation(fields: [memberId], references: [id])
+  memberId  String
+  expense   expense  @relation(fields: [expenseId], references: [id])
+  expenseId String
+  shareCents     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([memberId, expenseId])
+}
