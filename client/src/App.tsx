@@ -1,19 +1,20 @@
 import "./App.css";
 import { useEffect, useState } from "react";
+import GroupForm from "./groupForm";
+import GroupList from "./groupList";
+import type { Group } from "./group";
 
 function App() {
-  type Group = {
-    id: string;
-    name: string;
-  };
-
   const [groups, setGroups] = useState<Group[]>([]);
-  const [newGroupName, setNewGroupName] = useState<string>("");
 
-  // Fetch groups from the backend API
   useEffect(() => {
     fetch("/api/groups")
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Could not load groups: ${response.status}`);
+        }
+        return response.json() as Promise<Group[]>;
+      })
       .then((data) => setGroups(data))
       .catch((error) => console.error("Error fetching groups:", error));
   }, []);
@@ -21,45 +22,8 @@ function App() {
   return (
     <>
       <h1>Shared Bills</h1>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault(); 
-          if (newGroupName.trim() === "") return;
-
-          fetch("/api/groups", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ name: newGroupName }),
-          })
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error("network response failed");
-              }
-              return response.json();
-            })
-            .then((newGroup) => {
-              setGroups([...groups, newGroup]);
-              setNewGroupName("");
-            })
-            .catch((error) => console.error("Error creating group:", error));
-        }}
-      >
-        <label htmlFor="new-group-name">New Group Name:</label>
-        <input
-          id="new-group-name"
-          type="text"
-          value={newGroupName}
-          onChange={(e) => setNewGroupName(e.target.value)}
-        />
-        <button type = "submit">Create Group</button>
-      </form>
-      <ul>
-        {groups.map((group) => (
-          <li key={group.id}>{group.name}</li>
-        ))}
-      </ul>
+      <GroupForm onCreated={(newGroup) => setGroups((current) => [...current, newGroup])} />
+      <GroupList groups={groups} />
     </>
   );
 }
