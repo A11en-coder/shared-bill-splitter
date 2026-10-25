@@ -21,7 +21,7 @@ function App() {
 
   return (
     <>
-      <h1>Shared Bills</h1>
+      <h1>Shared Bills Splitter</h1>
       <GroupForm onCreated={(newGroup) => setGroups((current) => [...current, newGroup])} />
       <GroupList groups={groups} />
     </>

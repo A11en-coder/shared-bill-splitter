@@ -16,10 +16,13 @@ function GroupDetails({ group }: GroupDetailsProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [newMemberName, setNewMemberName] = useState("");
   const [description, setDescription] = useState("");
-  const [amountDollars, setAmountDollars] = useState('');
-  const [payerId, setPayerId] = useState('');
+  const [amountDollars, setAmountDollars] = useState("");
+  const [payerId, setPayerId] = useState("");
   const [balance, setBalance] = useState<Record<string, number>>({});
   const [balanceRefresh, setBalanceRefresh] = useState(0); // state variable to trigger balance refresh
+  const [paymentPayerId, setPaymentPayerId] = useState("");
+  const [paymentPayeeId, setPaymentPayeeId] = useState("");
+  const [paymentAmountDollars, setPaymentAmountDollars] = useState("");
 
   // fetch the members of the group when the component mounts
   useEffect(() => {
@@ -47,7 +50,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
       })
       .then((data) => setBalance(data))
       .catch((error) => console.error("Error fetching balance:", error));
-  }, [group.id, balanceRefresh]); 
+  }, [group.id, balanceRefresh]);
 
   return (
     <div>
@@ -56,7 +59,10 @@ function GroupDetails({ group }: GroupDetailsProps) {
       <ul>
         {members.map((member) => (
           <li key={member.id}>
-            {member.name} - Balance: ${balance[member.id] ? (balance[member.id] / 100).toFixed(2) : "0.00"}
+            {member.name} - Balance: $
+            {balance[member.id]
+              ? (balance[member.id] / 100).toFixed(2)
+              : "0.00"}
           </li>
         ))}
       </ul>
@@ -100,9 +106,14 @@ function GroupDetails({ group }: GroupDetailsProps) {
           event.preventDefault();
           // convert the amount from dollars to cents
           const amountCents = Math.round(parseFloat(amountDollars) * 100);
-          
+
           // check the description, amountCents, and payerId are valid
-          if (!description.trim() || isNaN(amountCents) || amountCents <= 0 || !payerId) {
+          if (
+            !description.trim() ||
+            isNaN(amountCents) ||
+            amountCents <= 0 ||
+            !payerId
+          ) {
             console.error("Invalid expense data");
             return;
           }
@@ -112,7 +123,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
             console.error("Invalid expense amount");
             return;
           }
-          
+
           // send a POST request to the server to add the new expense
           fetch(`/api/groups/${group.id}/expenses`, {
             method: "POST",
@@ -127,8 +138,8 @@ function GroupDetails({ group }: GroupDetailsProps) {
             })
             .then(() => {
               setDescription("");
-              setAmountDollars('');
-              setPayerId('');
+              setAmountDollars("");
+              setPayerId("");
               setBalanceRefresh((prev) => prev + 1);
             })
             .catch((error) => console.error("Error adding expense:", error));
@@ -165,6 +176,89 @@ function GroupDetails({ group }: GroupDetailsProps) {
           ))}
         </select>
         <button type="submit">Add expense</button>
+      </form>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          // validate the payment form inputs
+          if (
+            !paymentPayerId ||
+            !paymentPayeeId ||
+            paymentPayerId === paymentPayeeId ||
+            isNaN(parseFloat(paymentAmountDollars)) ||
+            parseFloat(paymentAmountDollars) <= 0 || !Number.isSafeInteger(Math.round(parseFloat(paymentAmountDollars) * 100)) ||
+            Math.round(parseFloat(paymentAmountDollars) * 100) > 2147483647
+          ) {
+            console.error("Invalid payment data");
+            return;
+          }
+          
+          // convert the payment amount from dollars to cents
+          const paymentAmountCents = Math.round(parseFloat(paymentAmountDollars) * 100);
+
+          // send a POST request to the server to record the payment
+          fetch(`/api/groups/${group.id}/payments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              payerId: paymentPayerId,
+              payeeId: paymentPayeeId,
+              amountCents: paymentAmountCents,
+            }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Could not record payment: ${response.status}`);  
+              }
+              return response.json();
+            })
+            .then(() => {
+              setPaymentPayerId("");
+              setPaymentPayeeId("");
+              setPaymentAmountDollars("");
+              setBalanceRefresh((prev) => prev + 1);
+            })
+            .catch((error) => console.error("Error recording payment:", error));
+        }}
+      >
+        <label htmlFor="payment-payer-select">Payment Payer:</label>
+        <select
+          id="payment-payer-select"
+          value={paymentPayerId}
+          onChange={(event) => setPaymentPayerId(event.target.value)}
+          required
+        >
+          <option value="">Select a payer</option>
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name}
+            </option>
+          ))}
+        </select>
+        <label htmlFor="payment-payee-select">Payment Payee:</label>
+        <select
+          id="payment-payee-select"
+          value={paymentPayeeId}
+          onChange={(event) => setPaymentPayeeId(event.target.value)}
+          required
+        >
+          <option value="">Select a payee</option>
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name}
+            </option>
+          ))}
+        </select>
+        <label htmlFor="payment-amount">Payment Amount:</label>
+        <input
+          id="payment-amount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={paymentAmountDollars}
+          onChange={(event) => setPaymentAmountDollars(event.target.value)}
+        />
+        <button type="submit">Record Payment</button>
       </form>
     </div>
   );
