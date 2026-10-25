@@ -152,3 +152,61 @@ app.post("/groups/:groupId/expenses", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// add a post endpoint that records a payment made by a member to another member in a group
+app.post("/groups/:groupId/payments", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { payerId, payeeId, amountCents } = req.body;
+    // check the validity of the request body parameters
+    if (typeof payerId !== "string" || payerId.trim() === "") {
+      return res.status(400).json({ error: "Invalid payer" });
+    }
+    if (typeof payeeId !== "string" || payeeId.trim() === "") {
+      return res.status(400).json({ error: "Invalid payee" });
+    }
+    if (payerId === payeeId) {
+      return res.status(400).json({ error: "Payer and payee cannot be the same" });
+    }
+    // check if amountCents is a positive integer with maximum value of 2,147,483,647 (max value for a 32-bit signed integer)
+    if (
+      typeof amountCents !== "number" ||
+        !Number.isSafeInteger(amountCents) ||
+        amountCents <= 0 ||
+        amountCents > 2147483647
+    ) {
+      return res.status(400).json({ error: "Invalid payment amount" });
+    }
+    // check if the group exists and obtain the group id from the database
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: { members: true },
+    });
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+    if (!group.members.some((member) => member.id === payerId)) {
+      return res
+        .status(400)
+        .json({ error: "Payer is not a member of the group" });
+    }
+    if (!group.members.some((member) => member.id === payeeId)) {
+      return res
+        .status(400)
+        .json({ error: "Payee is not a member of the group" });
+    }
+    // create the new payment and associate it with the group and members
+    const newPayment = await prisma.payment.create({
+      data: {
+        amountCents: amountCents,
+        groupId: group.id,
+        payerId,
+        payeeId,
+      },
+    });
+    res.status(201).json(newPayment);
+  } catch (error) {
+    console.error("Error recording payment in group:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
