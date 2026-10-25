@@ -18,6 +18,8 @@ function GroupDetails({ group }: GroupDetailsProps) {
   const [description, setDescription] = useState("");
   const [amountDollars, setAmountDollars] = useState('');
   const [payerId, setPayerId] = useState('');
+  const [balance, setBalance] = useState<Record<string, number>>({});
+  const [balanceRefresh, setBalanceRefresh] = useState(0); // state variable to trigger balance refresh
 
   // fetch the members of the group when the component mounts
   useEffect(() => {
@@ -34,13 +36,28 @@ function GroupDetails({ group }: GroupDetailsProps) {
       .catch((error) => console.error("Error fetching members:", error));
   }, [group.id]);
 
+  // fetch the balance of each member when the component mounts
+  useEffect(() => {
+    fetch(`/api/groups/${group.id}/balances`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Could not load balance: ${response.status}`);
+        }
+        return response.json() as Promise<Record<string, number>>;
+      })
+      .then((data) => setBalance(data))
+      .catch((error) => console.error("Error fetching balance:", error));
+  }, [group.id, balanceRefresh]); 
+
   return (
     <div>
       <h2>{group.name}</h2>
       <h3>Members:</h3>
       <ul>
         {members.map((member) => (
-          <li key={member.id}>{member.name}</li>
+          <li key={member.id}>
+            {member.name} - Balance: ${balance[member.id] ? (balance[member.id] / 100).toFixed(2) : "0.00"}
+          </li>
         ))}
       </ul>
 
@@ -112,6 +129,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
               setDescription("");
               setAmountDollars('');
               setPayerId('');
+              setBalanceRefresh((prev) => prev + 1);
             })
             .catch((error) => console.error("Error adding expense:", error));
         }}
