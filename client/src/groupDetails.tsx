@@ -17,6 +17,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
   const [newMemberName, setNewMemberName] = useState("");
   const [description, setDescription] = useState("");
   const [amountDollars, setAmountDollars] = useState('');
+  const [payerId, setPayerId] = useState('');
 
   // fetch the members of the group when the component mounts
   useEffect(() => {
@@ -49,7 +50,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
           const name = newMemberName.trim();
           if (!name) return;
 
-          fetch(`/api/groups/${group.id}`, {
+          fetch(`/api/groups/${group.id}/members`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name }),
@@ -80,7 +81,39 @@ function GroupDetails({ group }: GroupDetailsProps) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          console.log(`Adding expense: ${description} for ${amountDollars} cents`);
+          // convert the amount from dollars to cents
+          const amountCents = Math.round(parseFloat(amountDollars) * 100);
+          
+          // check the description, amountCents, and payerId are valid
+          if (!description.trim() || isNaN(amountCents) || amountCents <= 0 || !payerId) {
+            console.error("Invalid expense data");
+            return;
+          }
+
+          // further validate the amountCents to ensure it is a positive integer and does not exceed 2,147,483,647
+          if (!Number.isSafeInteger(amountCents) || amountCents > 2147483647) {
+            console.error("Invalid expense amount");
+            return;
+          }
+          
+          // send a POST request to the server to add the new expense
+          fetch(`/api/groups/${group.id}/expenses`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description, amountCents, payerId }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Could not add expense: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then(() => {
+              setDescription("");
+              setAmountDollars('');
+              setPayerId('');
+            })
+            .catch((error) => console.error("Error adding expense:", error));
         }}
       >
         <label htmlFor="expense-description">Expense Description:</label>
@@ -90,7 +123,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
-        <label htmlFor="expense-amount">Expense Amount (in cents):</label>
+        <label htmlFor="expense-amount">Expense Amount:</label>
         <input
           id="expense-amount"
           type="number"
@@ -99,10 +132,23 @@ function GroupDetails({ group }: GroupDetailsProps) {
           value={amountDollars}
           onChange={(event) => setAmountDollars(event.target.value)}
         />
+        <label htmlFor="payer-select">Payer:</label>
+        <select
+          id="payer-select"
+          value={payerId}
+          onChange={(event) => setPayerId(event.target.value)}
+          required
+        >
+          <option value="">Select a payer</option>
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name}
+            </option>
+          ))}
+        </select>
         <button type="submit">Add expense</button>
       </form>
     </div>
-    
   );
 }
 
