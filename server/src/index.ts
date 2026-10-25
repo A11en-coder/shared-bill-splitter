@@ -1,6 +1,7 @@
 import express from "express";
 import { prisma } from "./db";
 import { splitEvenly } from "./splitEvenly";
+import { calculateBalances } from "./calculateBalances";
 
 const app = express();
 app.use(express.json());
@@ -210,3 +211,39 @@ app.post("/groups/:groupId/payments", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// a get endpoint that returns the balances for each member in a group by group id
+app.get("/groups/:groupId/balances", async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    // check if the group exists and obtain the group id from the database
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: { members: true, expenses: { include: { shares: true } }, payments: true },
+    });
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+    // calculate the balances for each member in the group
+    const memberIds = group.members.map((member) => member.id);
+    const expenses = group.expenses.map((expense) => ({
+      payerId: expense.payerId,
+      amountCents: expense.amountCents,
+      shares: expense.shares.map((share) => ({
+        memberId: share.memberId,
+        shareCents: share.shareCents,
+      })),
+    }));
+    const payments = group.payments.map((payment) => ({
+      payerId: payment.payerId,
+      payeeId: payment.payeeId,
+      amountCents: payment.amountCents,
+    }));
+    const balances = calculateBalances(expenses, payments, memberIds);
+    res.json(balances);
+  } catch (error) {
+    console.error("Error calculating balances for group:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+    
