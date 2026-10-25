@@ -2,18 +2,17 @@ import express from "express";
 import { prisma } from "./db";
 import { splitEvenly } from "./splitEvenly";
 import { calculateBalances } from "./calculateBalances";
-
+import { fileURLToPath } from "node:url";
 const app = express();
 app.use(express.json());
 
-// start the server on port 3000
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+const clientDist = fileURLToPath(
+  new URL("../../client/dist/", import.meta.url),
+);
+app.use(express.static(clientDist));
 
 // create a get /groups endpoint that returns all groups in the database
-app.get("/groups", async (req, res) => {
+app.get("/api/groups", async (req, res) => {
   try {
     const groups = await prisma.group.findMany();
     res.json(groups);
@@ -24,7 +23,7 @@ app.get("/groups", async (req, res) => {
 });
 
 // create a post /groups endpoint that creates a new group in the database
-app.post("/groups", async (req, res) => {
+app.post("/api/groups", async (req, res) => {
   try {
     const { name } = req.body;
     if (typeof name !== "string" || name.trim() === "") {
@@ -42,7 +41,7 @@ app.post("/groups", async (req, res) => {
 });
 
 // add a enpoint that adds a new member to a group
-app.post("/groups/:groupId/members", async (req, res) => {
+app.post("/api/groups/:groupId/members", async (req, res) => {
   try {
     const { groupId } = req.params;
     const { name } = req.body;
@@ -71,7 +70,7 @@ app.post("/groups/:groupId/members", async (req, res) => {
 });
 
 // add a get endpoint that gets the group details and all its members by group id
-app.get("/groups/:groupId", async (req, res) => {
+app.get("/api/groups/:groupId", async (req, res) => {
   try {
     const { groupId } = req.params;
     // check if the group exists and obtain the group id from the database
@@ -90,7 +89,7 @@ app.get("/groups/:groupId", async (req, res) => {
 });
 
 // add a post endpoint that adds a new expense to a group and splits the expense evenly among the members
-app.post("/groups/:groupId/expenses", async (req, res) => {
+app.post("/api/groups/:groupId/expenses", async (req, res) => {
   try {
     const { groupId } = req.params;
     const { description, amountCents, payerId } = req.body;
@@ -155,7 +154,7 @@ app.post("/groups/:groupId/expenses", async (req, res) => {
 });
 
 // add a post endpoint that records a payment made by a member to another member in a group
-app.post("/groups/:groupId/payments", async (req, res) => {
+app.post("/api/groups/:groupId/payments", async (req, res) => {
   try {
     const { groupId } = req.params;
     const { payerId, payeeId, amountCents } = req.body;
@@ -213,7 +212,7 @@ app.post("/groups/:groupId/payments", async (req, res) => {
 });
 
 // a get endpoint that returns the balances for each member in a group by group id
-app.get("/groups/:groupId/balances", async (req, res) => {
+app.get("/api/groups/:groupId/balances", async (req, res) => {
   try {
     const { groupId } = req.params;
     // check if the group exists and obtain the group id from the database
@@ -247,3 +246,8 @@ app.get("/groups/:groupId/balances", async (req, res) => {
   }
 });
     
+// start the server on port 3000
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
