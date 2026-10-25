@@ -15,6 +15,8 @@ function GroupDetails({ group }: GroupDetailsProps) {
   // the members are stored in a state variable, which is initialized to an empty array
   const [members, setMembers] = useState<Member[]>([]);
   const [newMemberName, setNewMemberName] = useState("");
+  const [description, setDescription] = useState("");
+  const [amountDollars, setAmountDollars] = useState('');
 
   // fetch the members of the group when the component mounts
   useEffect(() => {
@@ -47,7 +49,7 @@ function GroupDetails({ group }: GroupDetailsProps) {
           const name = newMemberName.trim();
           if (!name) return;
 
-          fetch(`/api/groups/${group.id}/members`, {
+          fetch(`/api/groups/${group.id}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name }),
@@ -74,7 +76,33 @@ function GroupDetails({ group }: GroupDetailsProps) {
         />
         <button type="submit">Add Member</button>
       </form>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          console.log(`Adding expense: ${description} for ${amountDollars} cents`);
+        }}
+      >
+        <label htmlFor="expense-description">Expense Description:</label>
+        <input
+          id="expense-description"
+          type="text"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+        <label htmlFor="expense-amount">Expense Amount (in cents):</label>
+        <input
+          id="expense-amount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          value={amountDollars}
+          onChange={(event) => setAmountDollars(event.target.value)}
+        />
+        <button type="submit">Add expense</button>
+      </form>
     </div>
+    
   );
 }
 
