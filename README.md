@@ -1,3 +1,6 @@
+## Demo website
+https://shared-bill-splitter.onrender.com
+
 ## Main user actions
 1. create group.
 2. add group members.
